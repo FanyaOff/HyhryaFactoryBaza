@@ -1,5 +1,5 @@
-local GITHUB_USER = "your-username"
-local GITHUB_REPO = "your-repo"
+local GITHUB_USER = "FanyaOff"
+local GITHUB_REPO = "HyhryaFactoryBaza"
 local BRANCH = "main"
 local MAIN_SCRIPT = "main.lua"
 local UPDATE_INTERVAL = 300
