@@ -163,8 +163,9 @@ local function runMainScript()
     if fs.exists(MAIN_SCRIPT) then
         log("Running " .. MAIN_SCRIPT)
         shell.run("lua " .. MAIN_SCRIPT)
-        log(RAW_BASE)
+        
     else
+        log(RAW_BASE)
         log("Main script not found: " .. MAIN_SCRIPT)
     end
 end
