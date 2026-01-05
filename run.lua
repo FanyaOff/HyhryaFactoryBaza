@@ -60,8 +60,6 @@ local function main()
     
     if downloaded and ran then
         log("Script updated and executed successfully")
-        log("Restarting to apply updates...")
-        os.reboot()
     elseif ran then
         log("Script executed (no update available)")
     else
