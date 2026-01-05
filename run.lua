@@ -1,189 +1,86 @@
-local GITHUB_USER = "FanyaOff"
-local GITHUB_REPO = "HyhryaFactoryBaza"
-local BRANCH = "main"
-local MAIN_SCRIPT = "main.lua"
-local UPDATE_INTERVAL = 300
+-- Simple ComputerCraft Auto-Update Script
+-- Downloads main.lua from GitHub and runs it
 
-local API_BASE = "https://api.github.com/repos/" .. GITHUB_USER .. "/" .. GITHUB_REPO
-local RAW_BASE = "https://raw.githubusercontent.com/" .. GITHUB_USER .. "/" .. GITHUB_REPO .. "/" .. BRANCH
+-- Configuration - CHANGE THESE VALUES
+local GITHUB_USER = "FanyaOff"  -- Your GitHub username
+local GITHUB_REPO = "HyhryaFactoryBaza"      -- Your repository name  
+local BRANCH = "main"                -- Branch name
+local SCRIPT_NAME = "main.lua"       -- Script to download and run
 
-local COMMIT_FILE = ".last_commit"
+-- Build the raw GitHub URL
+local GITHUB_URL = "https://raw.githubusercontent.com/" .. GITHUB_USER .. "/" .. GITHUB_REPO .. "/" .. BRANCH .. "/" .. SCRIPT_NAME
 
+-- Function to print with timestamp
 local function log(msg)
     print("[AutoUpdate] " .. os.date("%H:%M:%S") .. " - " .. msg)
 end
 
-local function checkInternet()
-    local success, response = pcall(http.get, "https://www.google.com", nil, 5)
-    if success and response then
-        response.close()
-        return true
-    end
-    return false
-end
-
-local function getLatestCommit()
-    local url = API_BASE .. "/commits/" .. BRANCH
-    local response = http.get(url)
+-- Function to download the script from GitHub
+local function downloadScript()
+    log("Downloading " .. SCRIPT_NAME .. " from GitHub...")
+    log("URL: " .. GITHUB_URL)
+    
+    -- Try to download the script
+    local response = http.get(GITHUB_URL)
     if not response then
-        return nil, "Failed to connect to GitHub API"
-    end
-    
-    local data = response.readAll()
-    response.close()
-    
-    local json = textutils.unserializeJSON(data)
-    if json and json.sha then
-        return json.sha
-    end
-    
-    return nil, "Failed to parse commit data"
-end
-
-local function getRepositoryFiles()
-    local url = API_BASE .. "/contents"
-    local response = http.get(url)
-    if not response then
-        return nil, "Failed to get repository contents"
-    end
-    
-    local data = response.readAll()
-    response.close()
-    
-    local files = textutils.unserializeJSON(data)
-    if not files then
-        return nil, "Failed to parse repository contents"
-    end
-    
-    return files
-end
-
-local function downloadFile(filePath, localPath)
-    local url = RAW_BASE .. "/" .. filePath
-    local response = http.get(url)
-    if not response then
-        return false, "Failed to download " .. filePath
+        log("ERROR: Failed to connect to GitHub")
+        return false
     end
     
     local content = response.readAll()
     response.close()
     
-    local dir = localPath:match("(.*/)")
-    if dir then
-        shell.run("mkdir -p " .. dir)
-    end
-    
-    local file = fs.open(localPath, "w")
-    if file then
-        file.write(content)
-        file.close()
-        return true
-    end
-    
-    return false, "Failed to write " .. localPath
-end
-
-local function updateFiles()
-    log("Checking for updates...")
-    
-    local files, err = getRepositoryFiles()
-    if not files then
-        log("Error: " .. err)
+    if not content or content == "" then
+        log("ERROR: Received empty content")
         return false
     end
     
-    local updated = false
-    for _, file in ipairs(files) do
-        if file.type == "file" then
-            local success, msg = downloadFile(file.path, file.name)
-            if success then
-                log("Updated: " .. file.name)
-                updated = true
-            else
-                log("Failed to update " .. file.name .. ": " .. msg)
-            end
-        end
-    end
-    
-    return updated
-end
-
-local function saveCommitHash(hash)
-    local file = fs.open(COMMIT_FILE, "w")
-    if file then
-        file.write(hash)
-        file.close()
-        return true
-    end
-    return false
-end
-
-local function loadCommitHash()
-    local file = fs.open(COMMIT_FILE, "r")
-    if file then
-        local hash = file.readAll()
-        file.close()
-        return hash:match("%S+")
-    end
-    return nil
-end
-
-local function checkForUpdates()
-    if not checkInternet() then
-        log("No internet connection")
+    -- Save the script
+    local file = fs.open(SCRIPT_NAME, "w")
+    if not file then
+        log("ERROR: Failed to create file")
         return false
     end
     
-    local latestCommit, err = getLatestCommit()
-    if not latestCommit then
-        log("Error getting latest commit: " .. err)
-        return false
-    end
+    file.write(content)
+    file.close()
     
-    local lastCommit = loadCommitHash()
-    
-    if lastCommit ~= latestCommit then
-        log("New version detected!")
-        local updated = updateFiles()
-        if updated then
-            saveCommitHash(latestCommit)
-            log("Update completed successfully")
-            return true
-        else
-            log("Update failed")
-            return false
-        end
+    log("SUCCESS: Downloaded " .. SCRIPT_NAME)
+    return true
+end
+
+-- Function to run the downloaded script
+local function runScript()
+    if fs.exists(SCRIPT_NAME) then
+        log("Running " .. SCRIPT_NAME)
+        -- Execute the script
+        shell.run("lua " .. SCRIPT_NAME)
     else
-        log("Already up to date")
+        log("ERROR: " .. SCRIPT_NAME .. " not found")
         return false
     end
+    return true
 end
 
-local function runMainScript()
-    if fs.exists(MAIN_SCRIPT) then
-        log("Running " .. MAIN_SCRIPT)
-        shell.run("lua " .. MAIN_SCRIPT)
-        
-    else
-        log(RAW_BASE)
-        log("Main script not found: " .. MAIN_SCRIPT)
-    end
-end
-
+-- Main function
 local function main()
-    log("Starting Auto-Update System")
-    log("Repository: " .. GITHUB_USER .. "/" .. GITHUB_REPO .. " (branch: " .. BRANCH .. ")")
+    log("Starting Auto-Update Script")
+    log("GitHub: " .. GITHUB_USER .. "/" .. GITHUB_REPO .. " (branch: " .. BRANCH .. ")")
     
-    local updated = checkForUpdates()
+    -- Download the script
+    local downloaded = downloadScript()
     
-    runMainScript()
+    -- Try to run it regardless of download success
+    local ran = runScript()
     
-    if updated then
-        log("Restarting to apply updates...")
-        os.reboot()
+    if downloaded and ran then
+        log("Script updated and executed successfully")
+    elseif ran then
+        log("Script executed (no update available)")
+    else
+        log("ERROR: Failed to execute script")
     end
-    
-
 end
 
+-- Run the main function
 main()
