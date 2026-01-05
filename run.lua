@@ -3,7 +3,7 @@ local GITHUB_REPO = "HyhryaFactoryBaza"
 local BRANCH = "main"
 local SCRIPT_NAME = "main.lua"
 
-local GITHUB_URL = "https://raw.githubusercontent.com/" .. GITHUB_USER .. "/" .. GITHUB_REPO .. "/" .. BRANCH .. "/" .. SCRIPT_NAME
+local GITHUB_URL = "https://raw.githubusercontent.com/" .. GITHUB_USER .. "/" .. GITHUB_REPO .. "/" .. BRANCH .. "/" .. SCRIPT_NAME .. "?t=" .. os.time()
 
 local function log(msg)
     print("[AutoUpdate] " .. os.date("%H:%M:%S") .. " - " .. msg)
